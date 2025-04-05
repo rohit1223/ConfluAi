@@ -8,7 +8,7 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
 from llm_adapter import create_ollama_llm
-from utils import load_documents, chunk_document
+from utils.utils import load_documents, chunk_document
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)

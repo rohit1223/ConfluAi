@@ -18,14 +18,24 @@ ConfluAI is a Retrieval-Augmented Generation (RAG) system built to run entirely 
 
 ## Repository Structure
 ```bash
-    ConfluAI/
-    ├── config.py         # Global configuration (directories, model names, etc.)
-    ├── embeddings.py     # Hugging Face embedding adapter (HFEmbedding)
-    ├── llm_adapter.py    # LLM adapter using the official Ollama adapter for LLaMA 3.2
-    ├── indexer.py        # Functions to build and query the FAISS index with LlamaIndex
-    ├── utils.py          # Utility functions (document loading, cleaning, chunking)
-    ├── main.py           # Main entry point to build and query the index
-    └── chat.py           # Continuous chat example with context using a custom workflow
+   ConfluAi/
+   ├── README.md              # This file – repository overview and instructions
+   ├── base_urls.txt          # A text file with the list of base URLs for web scraping
+   ├── config.py              # Global configuration file (paths, model names, etc.)
+   ├── confluence_docs/       # Directory to store scraped and cleaned Confluence documents (as text files)
+   ├── embeddings.py          # Module that implements the HFEmbedding adapter using Hugging Face Transformers
+   ├── faiss_index/           # Directory where the FAISS vector store and associated JSON files are persisted
+   ├── indexer.py             # Core module for building the FAISS index and querying it with LlamaIndex
+   ├── llm_adapter.py         # LLM adapter for querying the local LLaMA 3.2 via Ollama
+   ├── scrapper.py            # Web scraper module for collecting Confluence docs (moved to root)
+   ├── main.py                # Main entry point for ingesting documents and querying the system
+   ├── requirements.txt       # List of required Python packages
+   ├── tests/                 # Directory containing test scripts for the project
+   │   ├── test_embedding.py  # Test file for embeddings functionality
+   │   └── test_fiass.py      # Test file for FAISS-related functionality
+   └── utils/                 # Directory for additional utilities and helper functions
+      └── utils.py           # Other helper functions (e.g., cleaning, file operations)
+
 ```
 
 
@@ -33,7 +43,7 @@ ConfluAI is a Retrieval-Augmented Generation (RAG) system built to run entirely 
 
 ### Prerequisites
 
-- **Python 3.9+**
+- **Python 3.9.6+**
 - **Ollama:** Install and run [Ollama](https://ollama.com/) on your local machine to serve your LLaMA 3.2 model.
 - **Required Python Packages:** See the Installation section below.
 
@@ -49,6 +59,18 @@ ConfluAI is a Retrieval-Augmented Generation (RAG) system built to run entirely 
     python3 -m venv venv
     source venv/bin/activate  # On Windows: venv\Scripts\activate
     ```
+3. **Create configuration files and directory**
+   ```bash
+   mkdir confluence_docs # Should match the DOCS_DIR in the config.py
+   touch base_urls.txt 
+   ```
+4. **Populate the `base_urls.txt` with scraping URLs**
+   Example:
+      ```python
+      https://example.com/
+      https://dummyjson.com/docs
+      https://www.postman.com/api-platform/api-testing/
+      ```
 3. **Install Dependencies:**
     ```bash
     pip install -r requirements.txt
@@ -65,24 +87,25 @@ EMBEDDING_DIM = 384                      # Embedding dimension (adjust based on 
 
 OLLAMA_API_URL = "http://localhost:11434/api/generate"  # Ollama API endpoint
 OLLAMA_MODEL_NAME = "llama3.2:latest"      # Specify your local LLaMA model (adjust as needed)
+
+VALID_LINK_SUBSTRING = "Content/<YourContent>"
+VALID_LINK_EXTENSION = ".htm"
+EXCLUDE_EXTENSIONS = ['.pdf', '.zip']
 ```
 
 ### Ingesting Documents and Building the Index
 1. **Prepare Your Data:**
    1. Create the directoy specified in `DOCS_DIR` in the `config.py` Place your cleaned Confluence documents (plain text or markdown) in the directory specified by `DOCS_DIR`.
-   2. Create a file calles `base_urls.txt` and populate it with the list of urls to scrape.
-
-      Example:
-         ```python
-         https://example.com/
-         https://dummyjson.com/docs
-         https://www.postman.com/api-platform/api-testing/
-         ```
+   2. Create a file called `base_urls.txt` and populate it with the list of urls to scrape.
+   3. `scrapper.py` is an standalone modeul that has to be run separately to populate `DOCS_DIR`.
+      ```bash
+      python3 scrapper.py
+      ```
 
 2. **Build the Index:**
 In main.py, uncomment the build_index() call and run:
     ```bash
-    python main.py
+    python3 main.py
     ```
 
     This will:
@@ -103,7 +126,7 @@ In main.py, uncomment the build_index() call and run:
    2. Query the System:
       Modify the sample question if needed, then run:
     ```bash
-    python main.py 
+    python3 main.py 
     ```
    This loads the persisted index, retrieves relevant context, assembles a prompt, and uses your local LLaMA 3.2 (via Ollama) to generate an answer.
 

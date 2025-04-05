@@ -1,7 +1,7 @@
 import torch
 from transformers import AutoTokenizer, AutoModel
 from sklearn.preprocessing import normalize
-from utils import load_documents, chunk_document, clean_confluence_text
+from utils.utils import load_documents, chunk_document, clean_confluence_text
 from config import DOCS_DIR, FAISS_INDEX_PATH, EMBEDDING_DIM
 
 import numpy as np
