@@ -1,0 +1,12 @@
+# Ignore all files inside confluence_docs directory
+confluence_docs/*
+
+# Ignore the faiss_index directory
+faiss_index/
+
+# Ignore Python cache files and directories
+__pycache__/
+
+# Ignore the virtual environment directory
+venv/
+
