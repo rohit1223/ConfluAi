@@ -5,11 +5,16 @@ ConfluAI is a Retrieval-Augmented Generation (RAG) system built to run entirely 
 ## Features
 
 - **Local Processing:** All components run on your local machine—no external API keys or cloud dependencies.
+- **Web Scraping:** Unintigrated webscraper snippet to retrieve confluence content. 
 - **Embeddings:** Uses Hugging Face Transformers (e.g., `BAAI/bge-small-en-v1.5`) to convert text into dense vector representations.
 - **Vector Retrieval:** Utilizes FAISS for fast and efficient vector search.
 - **LLM Integration:** Queries a local LLaMA 3.2 model served via Ollama.
-- **P1+r4632=1B5B32347E\P0+r\P0+r\P1+r6B62=7F\P0+r\P1+r6B44=1B5B337E\P1+r6B68=1B4F48\P1+r4037=1B4F46\P1+r6B50=1B5B357E\P1+r6B4E=1B5B367E\Continuous Chat:** Supports context-aware, continuous conversations using a custom workflow.
+- **Context-aware Chat:** Supports context-aware quention queries.
 - **Modular Design:** Clear separation of concerns across multiple modules for ease of maintenance and extension.
+
+### WIP Feature
+- Integrated web scraper
+- Continuous conversations using a custom workflow
 
 ## Repository Structure
 ```bash
