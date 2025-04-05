@@ -9,4 +9,10 @@ __pycache__/
 
 # Ignore the virtual environment directory
 venv/
+.venv/
 
+# Ignore the list of URLs to scrape
+base_urls.txt
+
+# Ignore MAC's .DS_Store
+.DS_Store

@@ -26,16 +26,6 @@ def load_documents(doc_dir: str) -> list:
                     docs.append(f.read())
     return docs
 
-# cleaning logic
-def clean_confluence_text(text: str) -> str:
-    text = re.sub(r"<[^>]+>", "", text)  # Remove HTML tags
-    text = re.sub(r"\{[^}]+\}", "", text)  # Remove wiki macros or curly braces
-    text = re.sub(r"(\*{2,}|\_{2,}|-{2,})", "", text)  # Remove Markdown-style formatting
-    text = re.sub(r"(?i)page created by.*|last edited by.*", "", text)
-    text = re.sub(r"\s{2,}", " ", text)  # Normalize extra whitespace
-    return text.strip()
-
-
 def chunk_document(text: str, chunk_size: int = 1000, chunk_overlap: int = 100) -> list:
     """
     Splits the input text into chunks using a recursive character text splitter.

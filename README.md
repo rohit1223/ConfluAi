@@ -69,7 +69,15 @@ OLLAMA_MODEL_NAME = "llama3.2:latest"      # Specify your local LLaMA model (adj
 
 ### Ingesting Documents and Building the Index
 1. **Prepare Your Data:**
-Place your cleaned Confluence documents (plain text or markdown) in the directory specified by DOCS_DIR.
+   1. Create the directoy specified in `DOCS_DIR` in the `config.py` Place your cleaned Confluence documents (plain text or markdown) in the directory specified by `DOCS_DIR`.
+   2. Create a file calles `base_urls.txt` and populate it with the list of urls to scrape.
+
+      Example:
+         ```python
+         https://example.com/
+         https://dummyjson.com/docs
+         https://www.postman.com/api-platform/api-testing/
+         ```
 
 2. **Build the Index:**
 In main.py, uncomment the build_index() call and run:

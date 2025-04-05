@@ -5,3 +5,7 @@ EMBEDDING_DIM = 384
 
 OLLAMA_MODEL_NAME = "llama3.2:latest"
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
+
+VALID_LINK_SUBSTRING = "Content/APIGateway"
+VALID_LINK_EXTENSION = ".htm"
+EXCLUDE_EXTENSIONS = ['.pdf', '.zip']

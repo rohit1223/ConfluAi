@@ -8,7 +8,7 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
 from llm_adapter import create_ollama_llm
-from utils import load_documents, clean_confluence_text, chunk_document
+from utils import load_documents, chunk_document
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -31,8 +31,7 @@ def build_index() -> None:
     # Currently using SimpleDirectoryReader to load documents
     # documents = SimpleDirectoryReader(DOCS_DIR).load_data()
     for doc in raw_docs:
-        cleaned_doc = clean_confluence_text(doc)
-        chunks = chunk_document(cleaned_doc, 1000, 200)
+        chunks = chunk_document(doc, 1000, 200)
         for chunk in chunks:
             documents.append(Document(text=chunk))
 
