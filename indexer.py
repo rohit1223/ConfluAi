@@ -13,6 +13,7 @@ from utils.utils import load_documents, chunk_document
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
 
+
 def build_index() -> None:
     """
     Build the FAISS index:
@@ -59,6 +60,7 @@ def build_index() -> None:
     index.storage_context.persist(persist_dir=FAISS_INDEX_PATH)
     logging.info("Index built and saved successfully.")
 
+
 def query_index(question: str) -> None:
     """
     Query the FAISS index:
@@ -73,17 +75,22 @@ def query_index(question: str) -> None:
     hf_embedding = HFEmbedding()
 
     logging.info("Loading FAISS index from")
-    faiss_store = FaissVectorStore.from_persist_path("./faiss_index/default__vector_store.json")
-    storage_context = StorageContext.from_defaults(vector_store=faiss_store, persist_dir=FAISS_INDEX_PATH)
+    faiss_store = FaissVectorStore.from_persist_path(
+        "./faiss_index/default__vector_store.json")
+    storage_context = StorageContext.from_defaults(
+        vector_store=faiss_store, persist_dir=FAISS_INDEX_PATH)
 
     logging.info("Reconstructing index from FAISS vector store...")
     # index = VectorStoreIndex.from_vector_store(faiss_store, embed_model=hf_embedding)
-    index = load_index_from_storage(storage_context=storage_context, embed_model=hf_embedding)
+    index = load_index_from_storage(
+        storage_context=storage_context,
+        embed_model=hf_embedding)
 
     logging.info("Querying index for relevant context...")
     # query_engine = index.as_query_engine(embed_model=hf_embedding)
     ollama_llm = create_ollama_llm()
-    query_engine = index.as_query_engine(llm=ollama_llm, embed_model=hf_embedding)
+    query_engine = index.as_query_engine(
+        llm=ollama_llm, embed_model=hf_embedding)
 
     retrieved_context: Any = query_engine.query(question)
     context = str(retrieved_context)

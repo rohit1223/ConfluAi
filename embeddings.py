@@ -20,7 +20,11 @@ class HFEmbedding(BaseEmbedding):
 
     def _get_text_embedding(self, text: str) -> list:
         # Tokenize the input text
-        inputs = self.tokenizer(text, padding=True, truncation=True, return_tensors="pt")
+        inputs = self.tokenizer(
+            text,
+            padding=True,
+            truncation=True,
+            return_tensors="pt")
         with torch.no_grad():
             outputs = self.model(**inputs)
             # Mean pooling over token embeddings
@@ -42,7 +46,11 @@ class HFEmbedding(BaseEmbedding):
 
     def get_batch_text_embeddings(self, texts: list) -> list:
         # Batch processing for multiple texts
-        inputs = self.tokenizer(texts, padding=True, truncation=True, return_tensors="pt")
+        inputs = self.tokenizer(
+            texts,
+            padding=True,
+            truncation=True,
+            return_tensors="pt")
         with torch.no_grad():
             outputs = self.model(**inputs)
             embeddings = outputs.last_hidden_state.mean(dim=1)

@@ -15,6 +15,7 @@ DOCS_DIR = "./confluence_docs"
 HEADERS = {"User-Agent": "Mozilla/5.0"}
 visited = set()
 
+
 def load_base_urls(file_path):
     """Load base URLs from a file, one URL per line."""
     if not os.path.exists(file_path):
@@ -22,6 +23,7 @@ def load_base_urls(file_path):
     with open(file_path, "r", encoding="utf-8") as f:
         urls = [line.strip() for line in f if line.strip()]
     return urls
+
 
 def is_valid_link(link):
     return (
@@ -39,7 +41,8 @@ def clean_text(text: str) -> str:
     text = re.sub(r"\{[^}]+\}", "", text)
     # Remove Markdown-style formatting (bold, underscores, dashes)
     text = re.sub(r"(\*{2,}|\_{2,}|-{2,})", "", text)
-    # Remove boilerplate text like "page created by..." or "last edited by..." (case-insensitive)
+    # Remove boilerplate text like "page created by..." or "last edited by..."
+    # (case-insensitive)
     text = re.sub(r"(?i)page created by.*|last edited by.*", "", text)
     # Normalize extra whitespace (multiple spaces into one)
     text = re.sub(r"\s{2,}", " ", text)
@@ -47,14 +50,17 @@ def clean_text(text: str) -> str:
     text = re.sub(r'\n+', '\n', text)
     # Normalize the text to decompose combined characters (e.g., diacritics)
     normalized_text = unicodedata.normalize('NFKD', text)
-    # Encode to ASCII and ignore non-ASCII characters (e.g., unwanted artifacts like "Â")
+    # Encode to ASCII and ignore non-ASCII characters (e.g., unwanted
+    # artifacts like "Â")
     ascii_text = normalized_text.encode('ascii', 'ignore').decode('ascii')
     return ascii_text.strip()
+
 
 def slugify(text):
     text = text.lower()
     text = re.sub(r'[^a-z0-9]+', '_', text)
     return text.strip('_')
+
 
 def scrape(url):
     if url in visited:
@@ -68,8 +74,12 @@ def scrape(url):
         soup = BeautifulSoup(response.text, 'html.parser')
 
         title = soup.title.string.strip() if soup.title else "no_title"
-        headers_list = [tag.get_text(strip=True) for tag in soup.find_all(['h1', 'h2', 'h3'])]
-        content_paragraphs = [clean_text(p.get_text()) for p in soup.find_all('p') if p.get_text(strip=True)]
+        headers_list = [tag.get_text(strip=True)
+                        for tag in soup.find_all(['h1', 'h2', 'h3'])]
+        content_paragraphs = [
+            clean_text(
+                p.get_text()) for p in soup.find_all('p') if p.get_text(
+                strip=True)]
 
         full_text = f"Title: {title}\n\n"
         if headers_list:
@@ -96,6 +106,7 @@ def scrape(url):
 
     except Exception as e:
         print(f"[!] Failed to scrape {url}: {e}")
+
 
 # Load base URLs from the file
 BASE_URLS = load_base_urls("base_urls.txt")
