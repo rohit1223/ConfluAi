@@ -32,9 +32,17 @@ def build_index() -> None:
     # Currently using SimpleDirectoryReader to load documents
     # documents = SimpleDirectoryReader(DOCS_DIR).load_data()
     for doc in raw_docs:
-        chunks = chunk_document(doc, 1000, 200)
-        for chunk in chunks:
-            documents.append(Document(text=chunk))
+        chunks = chunk_document(doc)
+        for i, chunk in enumerate(chunks):
+            documents.append(Document(
+                text=chunk,
+                metadata={
+                    "file_path": doc.metadata.get("file_path", "unknown"),
+                    "title": doc.metadata.get("title", "untitled"),
+                    "chunk_id": i
+                }
+            )
+        )
 
     logging.info("Initializing Hugging Face embedding model...")
     hf_embedding = HFEmbedding()
