@@ -1,9 +1,9 @@
 # indexer.py
 import faiss
-import os
+import os, re
 import logging
 from typing import Any
-from llama_index.core import VectorStoreIndex, SimpleDirectoryReader, StorageContext, Document, load_index_from_storage
+from llama_index.core import VectorStoreIndex, StorageContext, Document, load_index_from_storage
 from llama_index.vector_stores.faiss import FaissVectorStore
 from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
@@ -13,7 +13,7 @@ from utils.utils import load_documents_with_metadata, chunk_document
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
-
+SECTION_REGEX = re.compile(r"Section:\s*(.+)\n")
 
 def build_index() -> None:
     """
@@ -30,18 +30,31 @@ def build_index() -> None:
     documents = []
 
     for doc in raw_docs:
-        text = doc.text
-        md   = getattr(doc, "extra_info", {})
-        chunks = chunk_document(text)
-        for i, chunk in enumerate(chunks):
-            documents.append(Document(
-                text=chunk,
-                metadata={
-                    "file_path": md.get("source", md.get("file_path", "unknown")),
-                    "chunk_id": i
-                }
-            )
-        )
+        full_text    = doc.text
+        md              = getattr(doc, "extra_info", {})
+        parts           = SECTION_REGEX.split(full_text)
+        sections = []
+
+        for i in range(1, len(parts), 2):
+            heading = parts[i].strip()
+            body    = parts[i+1]
+            sections.append((heading, body))
+
+
+        for heading, body in sections:
+            chunks = chunk_document(body)
+            for idx, chunk in enumerate(chunks):
+                documents.append(
+                    Document(
+                        text=chunk,
+                        metadata={
+                            "file_path": md.get("source", md.get("file_path", "unknown")),
+                            "section": heading,
+                            "chunk_id": idx
+                        }
+                    )
+                )
+            chunks = chunk_document(body)
 
     logging.info("Initializing Hugging Face embedding model...")
     hf_embedding = HFEmbedding()
@@ -100,7 +113,6 @@ def query_index(question: str) -> None:
         llm=ollama_llm, 
         embed_model=hf_embedding,
         text_qa_template=NO_HALLU_TEMPLATE,
-        similarity_top_k=6,
         verbose=False)
 
     retrieved_context: Any = query_engine.query(question)
@@ -114,8 +126,6 @@ def query_index(question: str) -> None:
             chunk_id  = meta.get("chunk_id", "<no-id>")
             print(f"- {file_path} (chunk {chunk_id})")
 
-    context = str(retrieved_context)
-    
     # Finally, print the answer
     print("\n=== ANSWER ===")
     print(answer) 

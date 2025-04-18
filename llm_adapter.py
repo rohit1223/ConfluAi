@@ -15,7 +15,7 @@ def create_ollama_llm():
         request_timeout=120.0,
         # Increase T if the model repeating the same phrase over and over
         # Decrease T if the model is hallucinating and the response is erratic
-        temperature=0.3, 
+        temperature=0.4, 
         # Nucleus Sampling
         # Instead of looking at all tokens, you sort tokens by probability,
         # then take the smallest set whose cumulative probability ≥ 𝑝,

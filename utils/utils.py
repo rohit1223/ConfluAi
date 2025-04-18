@@ -5,7 +5,7 @@ and to split long text documents into smaller chunks using a recursive character
 """
 import os
 import chardet
-from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter, RecursiveJsonSplitter
 from llama_index.core import SimpleDirectoryReader, Document
 
 
@@ -38,8 +38,8 @@ def load_documents_with_metadata(docs_dir: str) -> list[Document]:
     """
     return SimpleDirectoryReader(docs_dir).load_data()
 
-def chunk_document(text: str, chunk_size: int = 1000,
-                   chunk_overlap: int = 100) -> list:
+def chunk_document(text: str, chunk_size: int = 512,
+                   chunk_overlap: int = 50) -> list:
     """
     Splits the input text into chunks using a recursive character text splitter.
 
@@ -52,6 +52,20 @@ def chunk_document(text: str, chunk_size: int = 1000,
         List[str]: A list of text chunks.
     """
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+        chunk_size=chunk_size, 
+        chunk_overlap=chunk_overlap,
+        separators=["\n\n", "\n", ".", " ", ""]
+    )
     chunks = splitter.split_text(text)
+    return chunks
+
+def chunk_code(data: str, chunk_size: int = 1000,
+                   chunk_overlap: int = 0) -> list:
+    splitter = RecursiveJsonSplitter(
+            convert_lists=True,
+            max_chunk_size=chunk_size,
+            min_chunk_size=0,
+            chunk_overlap=chunk_overlap
+        )
+    chunks = splitter.split_json(data)
     return chunks

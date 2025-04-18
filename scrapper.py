@@ -47,20 +47,6 @@ def clean_text(text: str) -> str:
     # Unescape HTML entities
     text = html.unescape(text)
 
-    # Remove code fences (```...```) and inline code (`...`)
-    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
-    text = re.sub(r"`[^`]+`", "", text)
-
-    # Remove HTML tags and wiki markup
-    text = re.sub(r"<[^>]+>", "", text)
-    text = re.sub(r"\{\{[^}]+\}\}", "", text)
-
-    # Remove markdown headings, blockquotes, and list markers
-    text = re.sub(r"(?m)^[#>+\-*]\s*", "", text)
-
-    # Strip markdown links but keep link text
-    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
-
     # Remove URLs and email addresses
     text = re.sub(r"https?://\S+|www\.\S+", "", text)
     text = re.sub(r"\S+@\S+\.\S+", "", text)
@@ -100,7 +86,6 @@ def slugify(text):
     text = re.sub(r'[^a-z0-9]+', '_', text)
     return text.strip('_')
 
-
 def scrape(url):
     if url in visited:
         return
@@ -112,46 +97,63 @@ def scrape(url):
             return
         soup = BeautifulSoup(response.text, 'html.parser')
 
+        # --- Gather title, headers, paragraphs ---
         title = soup.title.string.strip() if soup.title else "no_title"
-        headers_list = [tag.get_text(strip=True)
-                        for tag in soup.find_all(['h1', 'h2', 'h3'])]
-        content_paragraphs = [
-            clean_text(
-                p.get_text()) for p in soup.find_all('p') if p.get_text(
-                strip=True)]
+        headers = [h.get_text(strip=True) for h in soup.find_all(['h1','h2','h3'])]
+        paragraphs = [
+            clean_text(p.get_text())
+            for p in soup.find_all('p')
+            if p.get_text(strip=True)
+        ]
 
-        full_text = f"Title: {title}\n\n"
-        if headers_list:
-            full_text += "Headers:\n" + "\n".join(headers_list) + "\n\n"
-        if content_paragraphs:
-            full_text += "Content:\n" + "\n".join(content_paragraphs)
+        # --- Gather and flatten code snippets ---
+        code_blocks = []
+        for pre in soup.find_all('pre'):
+            txt = pre.get_text()
+            if txt.strip():
+                code_blocks.append(txt)
+        for code in soup.find_all('code'):
+            if code.find_parent('pre') is None:
+                txt = code.get_text()
+                if txt.strip():
+                    code_blocks.append(txt)
 
-        safe_title = slugify(title)
-        if not safe_title:
-            safe_title = slugify(url)
-        filename = os.path.join(DOCS_DIR, f"{safe_title}.txt")
+        # one‑liner each
+        flat_snippets = [" ".join(block.split()) for block in code_blocks]
+
+        # --- Build a single-line full_text with literal \n and \n\n ---
+        parts = []
+        parts.append(f"Title: {title}\\n\\n")
+        if headers:
+            parts.append("Headers:\\n" + "\\n".join(headers) + "\\n\\n")
+        if paragraphs:
+            parts.append("Content:\\n" + "\\n".join(paragraphs) + "\\n\\n")
+        if flat_snippets:
+            parts.append("Code Snippets:\\n" + "\\n".join(flat_snippets) + "\\n\\n")
+
+        # join everything—no real newlines here, just literal backslashes
+        full_text = "".join(parts)
+
+        # --- Save to disk ---
+        safe_title = slugify(title) or slugify(url)
         os.makedirs(DOCS_DIR, exist_ok=True)
-        with open(filename, "w", encoding="utf-8") as f:
-            f.write(full_text)
-        print(f"[✓] Saved: {filename}")
+        fn = os.path.join(DOCS_DIR, f"{safe_title}.txt")
+        with open(fn, "w", encoding="utf-8") as f:
+            f.write(full_text)  # this will be one long line with \n characters
+        print(f"[✓] Saved: {fn}")
 
         visited.add(url)
-
-        for a_tag in soup.find_all('a', href=True):
-            full_url = urljoin(url, a_tag['href'])
-            if is_valid_link(full_url) and full_url not in visited:
+        for a in soup.find_all('a', href=True):
+            nxt = urljoin(url, a['href'])
+            if is_valid_link(nxt) and nxt not in visited:
                 time.sleep(3)
-                scrape(full_url)
+                scrape(nxt)
 
     except Exception as e:
         print(f"[!] Failed to scrape {url}: {e}")
 
-
-# Load base URLs from the file
 BASE_URLS = load_base_urls("base_urls.txt")
-
-# Start scraping from each base URL
-for base_url in BASE_URLS:
-    scrape(base_url)
+for base in BASE_URLS:
+    scrape(base)
 
 print("[✓] Done. Scraped pages have been saved in", DOCS_DIR)
