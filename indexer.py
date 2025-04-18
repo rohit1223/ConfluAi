@@ -96,7 +96,8 @@ def query_index(question: str) -> None:
     # query_engine = index.as_query_engine(embed_model=hf_embedding)
     ollama_llm = create_ollama_llm()
     query_engine = index.as_query_engine(
-        llm=ollama_llm, embed_model=hf_embedding)
+        llm=ollama_llm, 
+        embed_model=hf_embedding)
 
     retrieved_context: Any = query_engine.query(question)
     context = str(retrieved_context)
