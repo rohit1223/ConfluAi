@@ -2,6 +2,7 @@ import os
 import re
 import time
 import unicodedata
+import html  
 
 import requests
 from bs4 import BeautifulSoup
@@ -11,9 +12,9 @@ from config import VALID_LINK_SUBSTRING, VALID_LINK_EXTENSION, EXCLUDE_EXTENSION
 
 # Directory to store scraped documents (ensure this exists or will be created)
 DOCS_DIR = "./confluence_docs"
-
-HEADERS = {"User-Agent": "Mozilla/5.0"}
 visited = set()
+session = requests.Session()
+session.headers.update({"User-Agent": "Mozilla/5.0"})
 
 
 def load_base_urls(file_path):
@@ -35,26 +36,64 @@ def is_valid_link(link):
 
 
 def clean_text(text: str) -> str:
-    # Remove HTML tags
-    text = re.sub(r"<[^>]+>", "", text)
-    # Remove wiki macros or content inside curly braces
-    text = re.sub(r"\{[^}]+\}", "", text)
-    # Remove Markdown-style formatting (bold, underscores, dashes)
-    text = re.sub(r"(\*{2,}|\_{2,}|-{2,})", "", text)
-    # Remove boilerplate text like "page created by..." or "last edited by..."
-    # (case-insensitive)
-    text = re.sub(r"(?i)page created by.*|last edited by.*", "", text)
-    # Normalize extra whitespace (multiple spaces into one)
-    text = re.sub(r"\s{2,}", " ", text)
-    # Collapse multiple newlines into a single newline
-    text = re.sub(r'\n+', '\n', text)
-    # Normalize the text to decompose combined characters (e.g., diacritics)
-    normalized_text = unicodedata.normalize('NFKD', text)
-    # Encode to ASCII and ignore non-ASCII characters (e.g., unwanted
-    # artifacts like "Â")
-    ascii_text = normalized_text.encode('ascii', 'ignore').decode('ascii')
-    return ascii_text.strip()
+    """
+    Optimized text cleaning for improved embedding quality:
+    - Unescape HTML entities
+    - Remove code fences, inline code, HTML tags, wiki markup
+    - Strip markdown links, URLs, emails, citations
+    - Normalize punctuation and unicode
+    - Lowercase and normalize whitespace
+    """
+    # Unescape HTML entities
+    text = html.unescape(text)
 
+    # Remove code fences (```...```) and inline code (`...`)
+    text = re.sub(r"```.*?```", "", text, flags=re.DOTALL)
+    text = re.sub(r"`[^`]+`", "", text)
+
+    # Remove HTML tags and wiki markup
+    text = re.sub(r"<[^>]+>", "", text)
+    text = re.sub(r"\{\{[^}]+\}\}", "", text)
+
+    # Remove markdown headings, blockquotes, and list markers
+    text = re.sub(r"(?m)^[#>+\-*]\s*", "", text)
+
+    # Strip markdown links but keep link text
+    text = re.sub(r"\[([^\]]+)\]\([^)]+\)", r"\1", text)
+
+    # Remove URLs and email addresses
+    text = re.sub(r"https?://\S+|www\.\S+", "", text)
+    text = re.sub(r"\S+@\S+\.\S+", "", text)
+
+    # Remove inline citations like [1], (1)
+    text = re.sub(r"\[\d+\]|\(\d+\)", "", text)
+
+    # Remove boilerplate lines
+    text = re.sub(r"(?i)(page created by|last edited by)[^\n]*", "", text)
+
+    # Normalize punctuation: fancy quotes to ASCII, dashes
+    replacements = {
+        "“": "\"", "”": "\"", "‘": "'", "’": "'",
+        "—": "-", "–": "-"
+    }
+    for orig, repl in replacements.items():
+        text = text.replace(orig, repl)
+
+    # Normalize unicode characters
+    text = unicodedata.normalize("NFKC", text)
+
+    # Remove control characters
+    text = "".join(ch for ch in text if unicodedata.category(ch)[0] != "C")
+
+    # Lowercase for consistency
+    text = text.lower()
+
+    # Normalize whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+
+    # final ASCII filter: drop any non‑ASCII
+    ascii_text = text.encode('ascii', 'ignore').decode('ascii')
+    return ascii_text.strip()
 
 def slugify(text):
     text = text.lower()
@@ -67,7 +106,7 @@ def scrape(url):
         return
     print(f"[+] Scraping: {url}")
     try:
-        response = requests.get(url, headers=HEADERS, timeout=10)
+        response = session.get(url, timeout=10)
         if response.status_code != 200:
             print(f"[-] Skipped {url} with status {response.status_code}")
             return

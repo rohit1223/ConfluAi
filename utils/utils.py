@@ -4,8 +4,9 @@ It includes functions to load documents from a directory with proper encoding de
 and to split long text documents into smaller chunks using a recursive character splitter.
 """
 import os
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 import chardet
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from llama_index import SimpleDirectoryReader, Document
 
 
 def load_documents(doc_dir: str) -> list:
@@ -30,6 +31,12 @@ def load_documents(doc_dir: str) -> list:
                     docs.append(f.read())
     return docs
 
+def load_documents_with_metadata(docs_dir: str) -> list[Document]:
+    """
+    Returns Document with metadata that has things like 
+    'source' or 'file_path'
+    """
+    return SimpleDirectoryReader(docs_dir).load_data()
 
 def chunk_document(text: str, chunk_size: int = 1000,
                    chunk_overlap: int = 100) -> list:

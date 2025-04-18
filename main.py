@@ -12,3 +12,5 @@ if __name__ == "__main__":
     query_index(question)
     question1 = "Provide a sample spec to use this feature with API Gateway"
     query_index(question1)
+    question3="Who all are the team members of Ignite?"
+    query_index(question3)

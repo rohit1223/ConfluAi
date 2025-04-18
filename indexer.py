@@ -8,7 +8,7 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
 from llm_adapter import create_ollama_llm
-from utils.utils import load_documents, chunk_document
+from utils.utils import load_documents_with_metadata, chunk_document
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -24,21 +24,19 @@ def build_index() -> None:
     5. Construct a VectorStoreIndex using LlamaIndex and persist it.
     """
     logging.info("Clean and loading documents from: %s", DOCS_DIR)
-    # Uncomment and use cleaning if needed:
-    raw_docs = load_documents(DOCS_DIR)
-    documents = []
-    # documents = [clean_confluence_text(doc) for doc in raw_docs]
 
-    # Currently using SimpleDirectoryReader to load documents
-    # documents = SimpleDirectoryReader(DOCS_DIR).load_data()
+    raw_docs = load_documents_with_metadata(DOCS_DIR)
+    documents = []
+
     for doc in raw_docs:
-        chunks = chunk_document(doc)
+        text = doc.text
+        md   = getattr(doc, "extra_info", {})
+        chunks = chunk_document(text)
         for i, chunk in enumerate(chunks):
             documents.append(Document(
                 text=chunk,
                 metadata={
-                    "file_path": doc.metadata.get("file_path", "unknown"),
-                    "title": doc.metadata.get("title", "untitled"),
+                    "file_path": md.get("source", md.get("file_path", "unknown")),
                     "chunk_id": i
                 }
             )
