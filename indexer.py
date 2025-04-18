@@ -8,6 +8,7 @@ from llama_index.vector_stores.faiss import FaissVectorStore
 from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
 from llm_adapter import create_ollama_llm
+from prompt import NO_HALLU_TEMPLATE
 from utils.utils import load_documents_with_metadata, chunk_document
 
 # Setup basic logging configuration
@@ -97,19 +98,24 @@ def query_index(question: str) -> None:
     ollama_llm = create_ollama_llm()
     query_engine = index.as_query_engine(
         llm=ollama_llm, 
-        embed_model=hf_embedding)
+        embed_model=hf_embedding,
+        text_qa_template=NO_HALLU_TEMPLATE,
+        similarity_top_k=6,
+        verbose=False)
 
     retrieved_context: Any = query_engine.query(question)
+    answer = getattr(retrieved_context, "response", str(retrieved_context))
+    source_nodes = getattr(retrieved_context, "source_nodes", None)
+    if source_nodes:
+        print("\n=== CITATIONS ===")
+        for node in source_nodes:
+            meta = getattr(node, "source_node", getattr(node, "node", node)).metadata or {}
+            file_path = meta.get("file_path", meta.get("source", "<unknown>"))
+            chunk_id  = meta.get("chunk_id", "<no-id>")
+            print(f"- {file_path} (chunk {chunk_id})")
+
     context = str(retrieved_context)
-
-    # Assemble the prompt using the retrieved context
-    prompt = (
-        f"You are a Senior developer in API Gateway:\n\n"
-        f"Answer the following question using the context below:\n\n"
-        f"Context:\n{context}\n\nQuestion:\n{question}"
-    )
-    logging.info("Generated Prompt:\n%s", prompt)
-
-    logging.info("Querying local LLaMA 3.2 via Ollama...")
-    answer = ollama_llm.complete(prompt)
-    logging.info("\nFinal Answer:\n%s", answer)
+    
+    # Finally, print the answer
+    print("\n=== ANSWER ===")
+    print(answer) 
