@@ -13,8 +13,18 @@ from utils.utils import load_documents_with_metadata, chunk_document
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
-SECTION_REGEX = re.compile(r"Section:\s*(.+)\n")
 
+def extract_sections(full_text: str):
+    """
+    Parses out all 'Section: {heading}\\n{body}\\n\\n' blocks.
+    Yields (heading, body) tuples.
+    """
+    pattern = r"Section: (?P<heading>.+?)\n(?P<body>.*?)(?=(?:Section: )|\Z)"
+    for m in re.finditer(pattern, full_text, flags=re.DOTALL):
+        heading = m.group("heading").strip()
+        body    = m.group("body").strip()
+        yield heading, body
+        
 def build_index() -> None:
     """
     Build the FAISS index:
@@ -30,31 +40,25 @@ def build_index() -> None:
     documents = []
 
     for doc in raw_docs:
-        full_text    = doc.text
-        md              = getattr(doc, "extra_info", {})
-        parts           = SECTION_REGEX.split(full_text)
-        sections = []
+        full_text = doc.text
+        md        = getattr(doc, "extra_info", {})
 
-        for i in range(1, len(parts), 2):
-            heading = parts[i].strip()
-            body    = parts[i+1]
-            sections.append((heading, body))
-
-
-        for heading, body in sections:
+        # 1️⃣ Split into sections
+        for heading, body in extract_sections(full_text):
+            # 2️⃣ Chunk each section body
             chunks = chunk_document(body)
-            for idx, chunk in enumerate(chunks):
+            # 3️⃣ Add chunks with metadata
+            for i, chunk in enumerate(chunks):
                 documents.append(
                     Document(
                         text=chunk,
                         metadata={
                             "file_path": md.get("source", md.get("file_path", "unknown")),
                             "section": heading,
-                            "chunk_id": idx
+                            "chunk_id": i,
                         }
                     )
                 )
-            chunks = chunk_document(body)
 
     logging.info("Initializing Hugging Face embedding model...")
     hf_embedding = HFEmbedding()

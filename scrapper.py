@@ -92,57 +92,63 @@ def scrape(url):
     print(f"[+] Scraping: {url}")
     try:
         response = session.get(url, timeout=10)
+        response.encoding = "utf-8"       # force correct decoding
         if response.status_code != 200:
             print(f"[-] Skipped {url} with status {response.status_code}")
             return
+
         soup = BeautifulSoup(response.text, 'html.parser')
 
-        # --- Gather title, headers, paragraphs ---
         title = soup.title.string.strip() if soup.title else "no_title"
-        headers = [h.get_text(strip=True) for h in soup.find_all(['h1','h2','h3'])]
-        paragraphs = [
-            clean_text(p.get_text())
-            for p in soup.find_all('p')
-            if p.get_text(strip=True)
-        ]
 
-        # --- Gather and flatten code snippets ---
-        code_blocks = []
-        for pre in soup.find_all('pre'):
-            txt = pre.get_text()
-            if txt.strip():
-                code_blocks.append(txt)
-        for code in soup.find_all('code'):
-            if code.find_parent('pre') is None:
-                txt = code.get_text()
-                if txt.strip():
-                    code_blocks.append(txt)
+        # ─── Pre‑segment into sections ───
+        sections = []
+        current = {"heading": "ROOT", "texts": []}
 
-        # one‑liner each
-        flat_snippets = [" ".join(block.split()) for block in code_blocks]
+        for elem in soup.find_all(['h1','h2','h3','p','li','pre','code']):
+            tag = elem.name
+            raw = elem.get_text()
+            if not raw or not raw.strip():
+                continue
 
-        # --- Build a single-line full_text with literal \n and \n\n ---
+            if tag in ('h1','h2','h3'):
+                # start a new section
+                if current["texts"]:
+                    sections.append(current)
+                current = {"heading": raw.strip(), "texts": []}
+            else:
+                # clean and aggregate
+                cleaned = clean_text(raw)
+                if cleaned:
+                    current["texts"].append(cleaned)
+
+        # flush last
+        if current["texts"]:
+            sections.append(current)
+
+        # ─── Build full_text with real newlines ───
         parts = []
-        parts.append(f"Title: {title}\\n\\n")
-        if headers:
-            parts.append("Headers:\\n" + "\\n".join(headers) + "\\n\\n")
-        if paragraphs:
-            parts.append("Content:\\n" + "\\n".join(paragraphs) + "\\n\\n")
-        if flat_snippets:
-            parts.append("Code Snippets:\\n" + "\\n".join(flat_snippets) + "\\n\\n")
+        parts.append(f"Title: {title}\n\n")
 
-        # join everything—no real newlines here, just literal backslashes
+        for sec in sections:
+            hdr  = sec["heading"]
+            body = "\n".join(sec["texts"])
+            parts.append(f"Section: {hdr}\n")
+            parts.append(body + "\n\n")
+
         full_text = "".join(parts)
 
-        # --- Save to disk ---
+        # ─── Save to disk ───
         safe_title = slugify(title) or slugify(url)
         os.makedirs(DOCS_DIR, exist_ok=True)
         fn = os.path.join(DOCS_DIR, f"{safe_title}.txt")
         with open(fn, "w", encoding="utf-8") as f:
-            f.write(full_text)  # this will be one long line with \n characters
-        print(f"[✓] Saved: {fn}")
+            f.write(full_text)
 
+        print(f"[✓] Saved: {fn}")
         visited.add(url)
+
+        # ─── Follow links ───
         for a in soup.find_all('a', href=True):
             nxt = urljoin(url, a['href'])
             if is_valid_link(nxt) and nxt not in visited:
@@ -151,6 +157,7 @@ def scrape(url):
 
     except Exception as e:
         print(f"[!] Failed to scrape {url}: {e}")
+
 
 BASE_URLS = load_base_urls("base_urls.txt")
 for base in BASE_URLS:
