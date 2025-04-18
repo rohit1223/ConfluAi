@@ -16,15 +16,23 @@ logging.basicConfig(level=logging.INFO)
 
 def extract_sections(full_text: str):
     """
-    Parses out all 'Section: {heading}\\n{body}\\n\\n' blocks.
-    Yields (heading, body) tuples.
+    Parses 'Section: {heading}\n{body}\n\n' blocks.
+    If none are found, yields a single default section.
     """
+    import re
     pattern = r"Section: (?P<heading>.+?)\n(?P<body>.*?)(?=(?:Section: )|\Z)"
-    for m in re.finditer(pattern, full_text, flags=re.DOTALL):
-        heading = m.group("heading").strip()
-        body    = m.group("body").strip()
-        yield heading, body
-        
+    matches = list(re.finditer(pattern, full_text, flags=re.DOTALL))
+
+    if matches:
+        for m in matches:
+            heading = m.group("heading").strip()
+            body    = m.group("body").strip()
+            yield heading, body
+    else:
+        # Fallback: no explicit sections, treat everything as one chunk
+        yield "ROOT", full_text.strip()
+
+
 def build_index() -> None:
     """
     Build the FAISS index:
@@ -43,11 +51,11 @@ def build_index() -> None:
         full_text = doc.text
         md        = getattr(doc, "extra_info", {})
 
-        # 1️⃣ Split into sections
+        # Split into sections
         for heading, body in extract_sections(full_text):
-            # 2️⃣ Chunk each section body
+            # Chunk each section body
             chunks = chunk_document(body)
-            # 3️⃣ Add chunks with metadata
+            # Add chunks with metadata
             for i, chunk in enumerate(chunks):
                 documents.append(
                     Document(
@@ -129,6 +137,9 @@ def query_index(question: str) -> None:
             file_path = meta.get("file_path", meta.get("source", "<unknown>"))
             chunk_id  = meta.get("chunk_id", "<no-id>")
             print(f"- {file_path} (chunk {chunk_id})")
+
+    print("\n=== QUESTION ===")
+    print(question) 
 
     # Finally, print the answer
     print("\n=== ANSWER ===")
