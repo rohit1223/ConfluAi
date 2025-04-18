@@ -68,3 +68,36 @@ def chunk_code(data: str, chunk_size: int = 1000,
         )
     chunks = splitter.split_json(data)
     return chunks
+
+def get_citation_and_score(response) -> None:
+    """
+    Extracts source_nodes from a LlamaIndex response, groups chunk_ids by file_path
+    with their similarity scores, and prints a citation map.
+    """
+    source_nodes = getattr(response, "source_nodes", None)
+    if not source_nodes:
+        print("\n=== CITATION MAP ===\n(No citations)")
+        return
+
+    # Build a map: file_path -> list of (chunk_id, score)
+    citation_map: dict[str, list[tuple[str, float]]] = {}
+    for node in source_nodes:
+        container = getattr(node, "source_node", getattr(node, "node", node))
+        meta = getattr(container, "metadata", {}) or {}
+        fp   = meta.get("file_path", meta.get("source", "<unknown>"))
+        cid  = meta.get("chunk_id", "<no-id>")
+
+        # extract the similarity score (.score or .similarity_score)
+        score = getattr(node, "score",
+                    getattr(node, "similarity_score", None))
+        score = float(score) if score is not None else None
+
+        citation_map.setdefault(fp, []).append((cid, score))
+
+
+    for fp, items in citation_map.items():
+        entries = ", ".join(
+            f"{cid}:{score:.4f}" if score is not None else cid
+            for cid, score in items
+        )
+        print(f"{fp} → {entries}")

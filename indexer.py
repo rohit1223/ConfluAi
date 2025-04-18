@@ -9,7 +9,7 @@ from config import DOCS_DIR, EMBEDDING_DIM, FAISS_INDEX_PATH
 from embeddings import HFEmbedding
 from llm_adapter import create_ollama_llm
 from prompt import NO_HALLU_TEMPLATE
-from utils.utils import load_documents_with_metadata, chunk_document
+from utils.utils import load_documents_with_metadata, chunk_document, get_citation_and_score
 
 # Setup basic logging configuration
 logging.basicConfig(level=logging.INFO)
@@ -128,26 +128,14 @@ def query_index(question: str) -> None:
         similarity_top_k=6,
         verbose=False)
 
-    retrieved_context: Any = query_engine.query(question)
-    answer = getattr(retrieved_context, "response", str(retrieved_context))
+    response: Any = query_engine.query(question)
+    answer = getattr(response, "response", str(response))
 
     print("\n=== QUESTION ===")
     print(question) 
 
-    # Finally, print the answer
     print("\n=== ANSWER ===")
     print(answer) 
 
-    source_nodes = getattr(retrieved_context, "source_nodes", None)
-    if source_nodes:
-        citation_map: dict[str, list[str]] = {}
-        print("\n=== CITATIONS ===")
-        for node in source_nodes:
-            meta = getattr(node, "source_node", getattr(node, "node", node)).metadata or {}
-            file_path = meta.get("file_path", meta.get("source", "<unknown>"))
-            chunk_id  = meta.get("chunk_id", "<no-id>")
-            
-            citation_map.setdefault(file_path, []).append(chunk_id)
-
-        for fp, chunks in citation_map.items():
-            print(f"{fp}: {chunks}")
+    print("\n=== CITATION (chunk_id: score) ===")
+    get_citation_and_score(response)
