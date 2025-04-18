@@ -6,7 +6,7 @@ and to split long text documents into smaller chunks using a recursive character
 import os
 import chardet
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from llama_index import SimpleDirectoryReader, Document
+from llama_index.core import SimpleDirectoryReader, Document
 
 
 def load_documents(doc_dir: str) -> list:
