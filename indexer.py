@@ -125,18 +125,11 @@ def query_index(question: str) -> None:
         llm=ollama_llm, 
         embed_model=hf_embedding,
         text_qa_template=NO_HALLU_TEMPLATE,
+        similarity_top_k=6,
         verbose=False)
 
     retrieved_context: Any = query_engine.query(question)
     answer = getattr(retrieved_context, "response", str(retrieved_context))
-    source_nodes = getattr(retrieved_context, "source_nodes", None)
-    if source_nodes:
-        print("\n=== CITATIONS ===")
-        for node in source_nodes:
-            meta = getattr(node, "source_node", getattr(node, "node", node)).metadata or {}
-            file_path = meta.get("file_path", meta.get("source", "<unknown>"))
-            chunk_id  = meta.get("chunk_id", "<no-id>")
-            print(f"- {file_path} (chunk {chunk_id})")
 
     print("\n=== QUESTION ===")
     print(question) 
@@ -144,3 +137,17 @@ def query_index(question: str) -> None:
     # Finally, print the answer
     print("\n=== ANSWER ===")
     print(answer) 
+
+    source_nodes = getattr(retrieved_context, "source_nodes", None)
+    if source_nodes:
+        citation_map: dict[str, list[str]] = {}
+        print("\n=== CITATIONS ===")
+        for node in source_nodes:
+            meta = getattr(node, "source_node", getattr(node, "node", node)).metadata or {}
+            file_path = meta.get("file_path", meta.get("source", "<unknown>"))
+            chunk_id  = meta.get("chunk_id", "<no-id>")
+            
+            citation_map.setdefault(file_path, []).append(chunk_id)
+
+        for fp, chunks in citation_map.items():
+            print(f"{fp}: {chunks}")
