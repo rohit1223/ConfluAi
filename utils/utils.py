@@ -53,8 +53,7 @@ def chunk_document(text: str, chunk_size: int = 512,
     """
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, 
-        chunk_overlap=chunk_overlap,
-        separators=["\n\n", "\n", ".", " ", ""]
+        chunk_overlap=chunk_overlap
     )
     chunks = splitter.split_text(text)
     return chunks
