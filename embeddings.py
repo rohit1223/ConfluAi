@@ -19,6 +19,7 @@ class HFEmbedding(BaseEmbedding):
         self.model = AutoModel.from_pretrained(model_name)
 
     def _get_text_embedding(self, text: str) -> list:
+        text = f"passage: {text.strip()}"
         # Tokenize the input text
         inputs = self.tokenizer(
             text,
@@ -27,13 +28,14 @@ class HFEmbedding(BaseEmbedding):
             return_tensors="pt")
         with torch.no_grad():
             outputs = self.model(**inputs)
-            # Mean pooling over token embeddings
-            embedding = outputs.last_hidden_state.mean(dim=1)
+            # CLS pooling for token embeddings
+            embedding = outputs.last_hidden_state[:, 0, :]
         embedding_np = embedding.cpu().numpy()
         normalized_vec = normalize(embedding_np)[0]
         return normalized_vec.tolist()
 
     def _get_query_embedding(self, text: str) -> list:
+        text = f"query: {text.strip()}"
         # Use the same method for query embedding
         return self._get_text_embedding(text)
 
@@ -44,16 +46,19 @@ class HFEmbedding(BaseEmbedding):
     async def _aget_query_embedding(self, text: str) -> list:
         return self._get_query_embedding(text)
 
-    def get_batch_text_embeddings(self, texts: list) -> list:
+    def get_batch_text_embeddings(self, texts: list, batch_size: int = 32) -> list:
         # Batch processing for multiple texts
-        inputs = self.tokenizer(
-            texts,
-            padding=True,
-            truncation=True,
-            return_tensors="pt")
-        with torch.no_grad():
-            outputs = self.model(**inputs)
-            embeddings = outputs.last_hidden_state.mean(dim=1)
-        embeddings_np = embeddings.cpu().numpy()
-        normalized_vecs = normalize(embeddings_np)
-        return normalized_vecs.tolist()
+        all_embeddings = []
+        for i in range(0, len(texts), batch_size):
+            batch = texts[i:i + batch_size]
+            batch = [f"passage: {t.strip()}" for t in batch]
+
+            inputs = self.tokenizer(batch, padding=True, truncation=True, return_tensors="pt")
+            with torch.no_grad():
+                outputs = self.model(**inputs)
+                embedding = outputs.last_hidden_state[:, 0, :]  # CLS pooling
+                embedding_np = embedding.cpu().numpy()
+                normalized_vecs = normalize(embedding_np)
+                all_embeddings.extend(normalized_vecs.tolist())
+
+        return all_embeddings
