@@ -39,28 +39,18 @@ def normalize_embeddings(embs: np.ndarray) -> np.ndarray:
 
 def build_index() -> None:
     """
-    Build the FAISS index:
-    1. Load documents from DOCS_DIR.
-    2. Compute embeddings using HFEmbedding.
-    3. Create a FAISS index (using IndexFlatIP) with the specified embedding dimension.
-    4. Build a StorageContext with FaissVectorStore.
-    5. Construct a VectorStoreIndex using LlamaIndex and persist it.
+    Build the FAISS index using LlamaIndex and HF embeddings.
     """
-    logging.info("Clean and loading documents from: %s", DOCS_DIR)
-
+    logging.info("Loading and processing documents from: %s", DOCS_DIR)
     raw_docs = load_documents_with_metadata(DOCS_DIR)
     documents = []
 
     for doc in raw_docs:
         full_text = doc.text
-        md        = getattr(doc, "extra_info", {})
+        md = getattr(doc, "extra_info", {})
 
-        # Split into sections
         for heading, body in extract_sections(full_text):
-            # Chunk each section body
-            chunks = chunk_document(body)
-            # Add chunks with metadata
-            for i, chunk in enumerate(chunks):
+            for i, chunk in enumerate(chunk_document(body)):
                 documents.append(
                     Document(
                         text=chunk,
@@ -75,20 +65,16 @@ def build_index() -> None:
     logging.info("Initializing Hugging Face embedding model...")
     hf_embedding = HFEmbedding()
 
-    logging.info("Generating batched embeddings (with normalization)...")
-    texts = [doc.text for doc in documents]
-    embeddings = hf_embedding.get_batch_text_embeddings(texts)
-
     logging.info("Creating FAISS HNSW index...")
     faiss_index = faiss.IndexHNSWFlat(EMBEDDING_DIM, 32)
     faiss_index.metric_type = faiss.METRIC_INNER_PRODUCT
     faiss_index.hnsw.efConstruction = 200
-    
-    logging.info("Creating FAISS vector store and storage context...")
+
+    logging.info("Initializing FAISS vector store and storage context...")
     faiss_store = FaissVectorStore(faiss_index=faiss_index)
     storage_context = StorageContext.from_defaults(vector_store=faiss_store)
 
-    logging.info("Building index with LlamaIndex...")
+    logging.info("Building vector store index from documents...")
     index = VectorStoreIndex.from_documents(
         documents=documents,
         embed_model=hf_embedding,
@@ -96,23 +82,13 @@ def build_index() -> None:
         show_progress=True
     )
 
-    logging.info("Building storage context with FAISS vector store...")
-    storage_context = StorageContext.from_defaults(vector_store=faiss_store)
-    
-
-    logging.info("Building vector store index from documents...")
-    index = VectorStoreIndex.from_documents(
-        vector_store=faiss_store,
-        embed_model=hf_embedding,
-        storage_context=storage_context,
-        show_progress=True
-    )
-
     if not os.path.exists("faiss_index"):
         os.makedirs("faiss_index")
-    logging.info("Persisting index")
+
+    logging.info("Persisting FAISS index and document store...")
     index.storage_context.persist(persist_dir=FAISS_INDEX_PATH)
-    logging.info("Index built and saved successfully.")
+
+    logging.info("✅ Index built and saved successfully.")
 
 
 def query_index(question: str) -> None:
