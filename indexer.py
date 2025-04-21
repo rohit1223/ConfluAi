@@ -83,22 +83,15 @@ def build_index() -> None:
     faiss_index = faiss.IndexHNSWFlat(EMBEDDING_DIM, 32)
     faiss_index.metric_type = faiss.METRIC_INNER_PRODUCT
     faiss_index.hnsw.efConstruction = 200
-    
-    logging.info("Creating FAISS vector store and storage context...")
-    faiss_store = FaissVectorStore(faiss_index=faiss_index)
-    storage_context = StorageContext.from_defaults(vector_store=faiss_store)
 
-    logging.info("Building index with LlamaIndex...")
-    index = VectorStoreIndex.from_documents(
-        documents=documents,
-        embed_model=hf_embedding,
-        storage_context=storage_context,
-        show_progress=True
-    )
+    logging.info("Adding embeddings to FAISS index...")
+    faiss_index.add(np.array(embeddings).astype("float32"))
+
+    logging.info("Creating FAISS vector store and storage context...")
+    faiss_store = FaissVectorStore(faiss_index=faiss_index, docs=documents)
 
     logging.info("Building storage context with FAISS vector store...")
     storage_context = StorageContext.from_defaults(vector_store=faiss_store)
-    
 
     logging.info("Building vector store index from documents...")
     index = VectorStoreIndex.from_documents(
