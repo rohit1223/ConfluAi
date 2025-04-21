@@ -2,7 +2,6 @@
 import faiss
 import os, re
 import logging
-import numpy as np
 from typing import Any
 from llama_index.core import VectorStoreIndex, StorageContext, Document, load_index_from_storage
 from llama_index.vector_stores.faiss import FaissVectorStore
@@ -32,9 +31,6 @@ def extract_sections(full_text: str):
     else:
         # Fallback: no explicit sections, treat everything as one chunk
         yield "ROOT", full_text.strip()
-
-def normalize_embeddings(embs: np.ndarray) -> np.ndarray:
-    return embs / np.linalg.norm(embs, axis=1, keepdims=True)
 
 
 def build_index() -> None:
@@ -75,27 +71,16 @@ def build_index() -> None:
     logging.info("Initializing Hugging Face embedding model...")
     hf_embedding = HFEmbedding()
 
-    logging.info("Generating batched embeddings (with normalization)...")
-    texts = [doc.text for doc in documents]
-    embeddings = hf_embedding.get_batch_text_embeddings(texts)
-
-    logging.info("Creating FAISS HNSW index...")
-    faiss_index = faiss.IndexHNSWFlat(EMBEDDING_DIM, 32)
-    faiss_index.metric_type = faiss.METRIC_INNER_PRODUCT
-    faiss_index.hnsw.efConstruction = 200
-
-    logging.info("Adding embeddings to FAISS index...")
-    faiss_index.add(np.array(embeddings).astype("float32"))
-
-    logging.info("Creating FAISS vector store and storage context...")
-    faiss_store = FaissVectorStore(faiss_index=faiss_index, docs=documents)
+    logging.info("Creating FAISS index...")
+    faiss_index = faiss.IndexFlatIP(EMBEDDING_DIM)
+    faiss_store = FaissVectorStore(faiss_index=faiss_index)
 
     logging.info("Building storage context with FAISS vector store...")
     storage_context = StorageContext.from_defaults(vector_store=faiss_store)
 
     logging.info("Building vector store index from documents...")
     index = VectorStoreIndex.from_documents(
-        vector_store=faiss_store,
+        documents,
         embed_model=hf_embedding,
         storage_context=storage_context,
         show_progress=True
