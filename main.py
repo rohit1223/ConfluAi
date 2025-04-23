@@ -6,7 +6,7 @@ DEFAULT_QUESTIONS = [
     "How do I set up custom domains and tls certificates with api gateway?",
     "How can I support multi-tenant token validation with dynamic auth routing?",
     "What is the purpose of the responsecachelookup and responsecachestorage policies in the API deployment JSON?",
-    "Can you provide a JSON example where an API deployment has multiple routes and applies different request policies to each?",
+    "Can you provide a JSON example where an API deployment has multiple routes and applies different backends for each routes?",
     "How can I upload an API description file for use in creating an API deployment specification?",
     "Who all are the team members of Ignite?"
 ]
