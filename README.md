@@ -2,6 +2,38 @@
 
 ConfluAI is a Retrieval-Augmented Generation (RAG) system built to run entirely locally. It leverages modern NLP technologies to answer questions and engage in continuous chat sessions using your project documentation (e.g., Confluence exports) as the knowledge base.
 
+## 🔥 Why ConfluAI?
+
+Modern teams are drowning in ever-growing documentation—Confluence pages, design specs, runbooks, and support guides. Finding the right answer can take minutes or even hours, slowing down development, support, and decision-making. ConfluAI transforms your sprawling Confluence knowledge base into a high-precision, citation-backed AI assistant that delivers the right answer—fast.
+## 🚀 What You Get
+
+    Instant, Accurate Answers
+    Leverage state-of-the-art embeddings (HFEmbedding + FAISS) and LLaMA 3 via Ollama to surface the most relevant snippets in milliseconds.
+
+    No-Hallucination Confidence
+    Our strict “no-hallucination” prompt template ensures the model only answers from your actual docs—otherwise it says “I don’t know.”
+
+    Transparent Citations
+    Every response comes with file paths and chunk-level scores, giving your team full auditability and trust.
+
+    Rich Context Handling
+    Intelligent pre-segmentation and metadata-aware chunking preserve headings, paragraphs, code blocks, and lists—so every answer is grounded in coherent, semantically meaningful sections.
+
+    Privacy & Control
+    Runs entirely on-prem or in your private cloud—no data ever leaves your environment.
+
+    Easy Integration
+    Out-of-the-box Python modules (scraper.py, indexer.py, main.py) slot into your CI/CD pipelines, Confluence export jobs, or scheduled ETL workflows.
+
+## 🌟 Key Features
+### Feature	Benefit
+Automated Confluence Scraping	Keeps index up-to-date with minimal manual effort
+RecursiveCharacterTextSplitter	Fine-grained control over chunk size & overlap
+FAISS Vector Store	Lightning-fast semantic search on millions of vectors
+RichPromptTemplate	Structured “SYSTEM → CONTEXT → QUESTION → ANSWER” pipelines
+Citation Map with Confidence	File & chunk IDs plus similarity scores for full transparency
+Low-Latency Local LLM	Deploy locally with Ollama for sub-second inference
+
 ## Features
 
 - **Local Processing:** All components run on your local machine—no external API keys or cloud dependencies.
